@@ -23,6 +23,8 @@ class TicTacToe:
             (EMPTY, EMPTY, EMPTY, EMPTY, CROSSES, EMPTY, EMPTY, EMPTY, EMPTY)
         )
         self.converter = lambda _: {EMPTY: " ", CROSSES: "X", CIRCLES: "O"}[_]
+        """Create a matrix/ vector to save all possible Q values to create a convergent tree"""
+        """Create a matrix/ vector to save the attempts in this possible node"""
 
     def winning(self, board: np.array) -> tuple[bool, int]:
         """Returns the winner of a game
@@ -112,6 +114,14 @@ class TicTacToe:
         else:
             raise KeyError("Board is full")
 
+    def selection(self, board: np.array) -> list:
+        node = [0]
+        if random.choice([True, False]):
+            return node
+        else:
+            move = random.choice(self.possible_moves(board))
+            node.append(move)
+
     def get_Q_values(self, node: Node = None, recursive: bool = True) -> list:
         """calculates the optimal strategy for play tic tac toe
 
@@ -137,6 +147,19 @@ class TicTacToe:
         print(self.print_board(new_board))
         return self.get_Q_values(node_prime)
 
+    def selection(self) -> None:
+        """randomly select point to do expantion and rollout on"""
+        pass
+
+    def expantion(self) -> list:
+        """return a list of all childeren of the found selection node"""
+        pass
+
+    def rollout(self) -> dict:
+        """returns all ternimation node rewards, by playing all expantion childeren until they terminate"""
+        """also update the Q value of the selection node (for convergence)"""
+        pass
+        
 
 if __name__ == "__main__":
     ttt = TicTacToe()
