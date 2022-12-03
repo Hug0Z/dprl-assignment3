@@ -61,6 +61,8 @@ class TicTacToe:
             (EMPTY, EMPTY, EMPTY, EMPTY, CROSSES, EMPTY, EMPTY, EMPTY, EMPTY)
         )
         self.player_made_moves = []
+        self.opponent_made_moves = [4]
+        self.game_order = [4]
 
     def winning(self, board: np.array) -> tuple[bool, int]:
         """Returns the winner of a game
@@ -146,6 +148,8 @@ class TicTacToe:
         possible_moves = self.possible_moves(board)
         if len(possible_moves) != 0:
             move = random.choice(possible_moves)
+            self.opponent_made_moves.append(move)
+            self.game_order.append(move)
             board[move] = CROSSES
             return board
         else:
@@ -183,6 +187,7 @@ class TicTacToe:
                 current_node.add_child(Tree(selected_node, 0))
 
             self.player_made_moves.append(selected_node)
+            self.game_order.append(selected_node)
             # laat de current_node wijzen naar de juiste node dus de child die net is toegevoegd.
             for c in current_node.children:
                 if c.move == selected_node:
@@ -204,17 +209,14 @@ class TicTacToe:
 
         for _ in range(5000):
             self.__init__()
+            current_node = tree
             # met de reward kunnen we een counter toevoegen aan hoe vaak een bepaalde node in de tree gewonnen heeft.
             # hiervoor moeten we een tree walker maken zodat we de juiste stappen kunnen nemen om bij de juiste nodes de counter te incrementen.
             reward = self.get_Q_values(
                 current_node, node=Node(ttt.board, []), recursive=False
             )
             # nu zetten we current_node weer terug naar de start node zodat de eerste stap die gemaakt wordt wordt toegevoegd aan de eerste node.
-            current_node = tree
-            # if reward == 1:
-            #     print(reward)
-            # print(player_made_moves)
-            tree.walk_tree_add_reward(self.player_made_moves, reward)
+            tree.walk_tree_add_reward(self.game_order, reward)
 
         # print alle nodes in de tree nog niet heel mooi als je helemaal naar boven scrolled zie je de eerste node die heeft 8 children dit zijn de 8 eerste moves.
         # heb voor nu uitgezet dat alle nodes worden geprint alleen de eerste node met ze children word geprint en dat zijn alle eerste moves die gemaakt zijn.
