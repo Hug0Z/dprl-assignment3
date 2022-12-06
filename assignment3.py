@@ -122,9 +122,8 @@ class TicTacToe:
         Returns:
             tuple[bool, int]: boolean if there is a winner, int corresponding to the winner symbol
         """
-
         # ROWS
-        for i in range(ROWS):
+        for i in range(0, ROWS * DIAGONALS, ROWS):
             if board[i] == board[i + 1] == board[i + 2] and board[i] != EMPTY:
                 return True, board[i]
 
@@ -135,26 +134,11 @@ class TicTacToe:
 
         # DIAGONALS (start top left to bottom right, then top right to bottom left)
         for k in range(DIAGONALS):
-            if board[0 if k == 0 else 3] == board[4] == board[8 if k == 0 else 6]:
+            if board[0 if k == 0 else 2] == board[4] == board[8 if k == 0 else 6]:
                 return True, board[k]
 
         # No winner yet
         return False, None
-
-    def winning_circle(self, board: np.array) -> int:
-        """Create the environment along with the terminal conditions
-            where the reward is 1 for the winner and 0 for the loser.
-
-        Args:
-            board (np.array): current state of board
-
-        Returns:
-            int: winning = 1, losing = 0
-        """
-        is_finished, winner = self.winning(board)
-
-        if is_finished:
-            return 1 if winner == CIRCLES else 0
 
     def print_board(self, board: np.array) -> None:
         """prints the current board in a 3x3 grid, instead of a 9 len array
