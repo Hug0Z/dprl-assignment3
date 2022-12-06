@@ -1,3 +1,4 @@
+import json
 import random
 
 import numpy as np
@@ -11,21 +12,33 @@ COLUMNS = 3
 DIAGONALS = 2
 
 
-class Node(object):
-    def __init__(self, board: np.array, moves: list) -> None:
-        self.board = board
-        self.moves = moves
-
-
 class Tree(object):
-    def __init__(self, data: int = -1, count: int = 0, reward: int = 0):
-        self.move = data
+    def __init__(
+        self,
+        id: int,
+        board: np.array = None,
+        mc_move: int = -1,
+        opponent_move: int = -1,
+        count: int = 0,
+        reward: int = 0,
+    ):
+        self.id = id
+        self.board = board
+        self.move = mc_move
+        self.opponent_move = opponent_move
         self.count = count
         self.reward = reward
+        self.child_id = []
         self.children = []
 
     def add_child(self, obj):
         self.children.append(obj)
+
+    def tree_q(self):
+        q = 0
+        for c in self.children:
+            q += c.reward / c.count
+        return q
 
     # deze mag nog wel verbeterd worden zodat je de hele tree kan
     # printen ik heb nu beetje geprobeerd maar het lukte niet echt.
@@ -36,25 +49,60 @@ class Tree(object):
                     c.move, c.reward, c.count, width=8
                 )
             )
+            print(c.move, c.opponent_move)
         print("printed children of: ", self.move)
+        i = 0
+        for cc in c.children:
+            print(
+                "{} reward: {:>{width}}\t count: {:>{width}}".format(
+                    cc.move, cc.reward, cc.count, width=8
+                )
+            )
+            i += 1
+            # print(i)
+        print("printed children of: ", c.move)
 
-    def find_child(self, move):
+    def find_child(self, move, opponent_move):
         for c in self.children:
-            if c.move == move:
+            if c.move == move and c.opponent_move == opponent_move:
                 return 1
         return 0
 
+    def find_best_move(self, opponent_move, board):
+        max = 0
+        move = -1
+        for c in self.children:
+            if c.opponent_move == opponent_move:
+                # print(c.move, "reward: ",c.reward," count: ",c.count)
+                if c.reward > 0 and c.count > 0:
+                    if c.reward / c.count > max and move not in board:
+                        max = c.reward / c.count
+                        move = c.move
+        # print("best move is: ",move," with q val: ", max)
+        return move
+
     def walk_tree_add_reward(self, moves, reward):
+        j = 0
         for move in moves:
-            for c in self.children:
-                if c.move == move:
-                    c.count += 1
-                    c.reward += reward
-                    self = c
+            j += 1
+            if j < len(moves):
+                # print("walking: ",moves[j],move)
+                for c in self.children:
+                    if c.move == moves[j] and c.opponent_move == move:
+                        # print("found node")
+                        c.count += 1
+                        c.reward += reward
+                        self = c
 
 
 class TicTacToe:
     converter = lambda _: {EMPTY: " ", CROSSES: "X", CIRCLES: "O"}[_]
+    tree = Tree(
+        id=4,
+        board=np.array(
+            (EMPTY, EMPTY, EMPTY, EMPTY, CROSSES, EMPTY, EMPTY, EMPTY, EMPTY)
+        ),
+    )
 
     def __init__(self) -> None:
         self.board = np.array(
@@ -63,8 +111,9 @@ class TicTacToe:
         self.player_made_moves = []
         self.opponent_made_moves = [4]
         self.game_order = [4]
+        self.total_tree = {}
 
-    def winning(self, board: np.array) -> tuple[bool, int]:
+    def winning(self, board: np.array):
         """Returns the winner of a game
 
         Args:
@@ -155,9 +204,29 @@ class TicTacToe:
         else:
             raise KeyError("Board is full")
 
-    def get_Q_values(
-        self, current_node, node: Node = None, recursive: bool = True
-    ) -> list:
+    def save_tree(
+        self, filename: str = "tree", top_node: Tree = tree, init: bool = True
+    ) -> None:
+        def node_data(node: Tree) -> None:
+            self.total_tree[node.id] = {
+                "Q_val": node.tree_q(),
+                "board": node.board.tolist(),
+                "cnt": node.count,
+                "rwd": node.reward
+                # "child": node.child_id,
+            }
+
+        if init:
+            init = False
+            node_data(top_node)
+        for child in top_node.children:
+            node_data(child)
+            self.save_tree(top_node=child, init=False)
+
+        with open(f"{filename}.json", "w") as fp:
+            json.dump(self.total_tree, fp)
+
+    def get_Q_values(self, current_node: Tree, recursive: bool = True) -> list:
         """calculates the optimal strategy for play tic tac toe
 
         Args:
@@ -168,23 +237,135 @@ class TicTacToe:
             list: IDK yet
         """
         # SLIDE 28 lecture 7
-        termination, winner = self.winning(node.board)
+        termination, winner = self.winning(current_node.board)
         if termination:
             return 1 if winner == CIRCLES else 0
-        elif len(self.possible_moves(node.board)) == 0:
+        elif len(self.possible_moves(current_node.board)) == 0:
             return 0.5
 
-        new_board = self.opponent_move(node.board) if recursive else self.board.copy()
+        new_board = (
+            self.opponent_move(current_node.board) if recursive else self.board.copy()
+        )
 
         moves = self.possible_moves(new_board)
         if len(moves) > 0:
             selected_node = random.choice(moves)
+            # selected_node = current_node.find_best_move(self.opponent_made_moves[0],self.game_order)
+            # print(current_node.find_best_move(self.opponent_made_moves[0]))
             # add newly found node. first check if it is already part of the children
             # check if the move is in the tree in the current state
             # if it is not in the tree add a new child node.
-            res = current_node.find_child(selected_node)
+            self.game_order.append(selected_node)
+            self.player_made_moves.append(selected_node)
+
+            res = current_node.find_child(selected_node, self.opponent_made_moves[0])
             if res == 0:
-                current_node.add_child(Tree(selected_node, 0))
+                current_node.add_child(
+                    Tree(
+                        id=int("".join([str(i) for i in self.game_order])),
+                        mc_move=selected_node,
+                        opponent_move=self.opponent_made_moves[0],
+                        count=1,
+                        reward=0.01,
+                    )
+                )
+            self.opponent_made_moves.remove(self.opponent_made_moves[0])
+            # current_node.add_child(Tree(selected_node, 0))
+            # laat de current_node wijzen naar de juiste node dus de child die net is toegevoegd.
+            for c in current_node.children:
+                if c.move == selected_node:
+                    current_node = c
+            new_board[selected_node] = CIRCLES
+            current_node.board = new_board.copy()
+
+        # print(self.print_board(new_board))
+        return self.get_Q_values(current_node)
+
+    def Q_convergence(self, epsilon=0.000001) -> None:
+        """Simulates the Game until convergence is achieved
+
+        Args:
+            epsilon (float, optional): max difference between iterations. Defaults to 0.00000001.
+        """
+        current_node = self.tree
+        i = 0
+        j = 0
+        old_q = 0
+        new_q = 1
+        difference = 1
+        while difference > epsilon:
+            self.__init__()
+            current_node = self.tree
+            old_q = self.tree.tree_q()
+            # met de reward kunnen we een counter toevoegen aan hoe vaak een bepaalde node in de tree gewonnen heeft.
+            # hiervoor moeten we een tree walker maken zodat we de juiste stappen kunnen nemen om bij de juiste nodes de counter te incrementen.
+            reward = self.get_Q_values(current_node, recursive=False)
+            # nu zetten we current_node weer terug naar de start node zodat de eerste stap die gemaakt wordt wordt toegevoegd aan de eerste node.
+            # print(self.game_order,reward)
+            if reward > 0:
+                i += 1
+            self.tree.walk_tree_add_reward(self.game_order, reward)
+            new_q = self.tree.tree_q()
+            # print(old_q,new_q)
+            difference = abs(old_q - new_q)
+            if j % 10000 == 0:
+                print(difference)
+            j += 1
+        # print alle nodes in de tree nog niet heel mooi als je helemaal naar boven scrolled zie je de eerste node die heeft 8 children dit zijn de 8 eerste moves.
+        # heb voor nu uitgezet dat alle nodes worden geprint alleen de eerste node met ze children word geprint en dat zijn alle eerste moves die gemaakt zijn.
+        # als je het weer aan wilt zetten kan je dat doen in de functie print_children door de commented lines te uncommenten.
+        current_node.print_children()
+        print("difference: ", difference)
+        print("totalgames: ", j, " games won: ", i)
+
+    def get_Q_valuess(self, current_node, recursive: bool = True) -> list:
+        """calculates the optimal strategy for play tic tac toe
+
+        Args:
+            node (Node, optional): node with data from previous state. Defaults to None.
+            recursive (bool, optional): if this is main node. Defaults to True.
+
+        Returns:
+            list: IDK yet
+        """
+        # SLIDE 28 lecture 7
+        termination, winner = self.winning(current_node.board)
+        if termination:
+            return 1 if winner == CIRCLES else 0
+        elif len(self.possible_moves(current_node.board)) == 0:
+            return 0.5
+
+        new_board = (
+            self.opponent_move(current_node.board) if recursive else self.board.copy()
+        )
+
+        moves = self.possible_moves(new_board)
+        if len(moves) > 0:
+            # selected_node = random.choice(moves)
+            selected_node = current_node.find_best_move(
+                self.opponent_made_moves[0], self.game_order
+            )
+            if selected_node == -1:
+                selected_node = random.choice(moves)
+                print(selected_node)
+            # print(current_node.find_best_move(self.opponent_made_moves[0]))
+            # add newly found node. first check if it is already part of the children
+            # check if the move is in the tree in the current state
+            # if it is not in the tree add a new child node.
+            res = current_node.find_child(selected_node, self.opponent_made_moves[0])
+            if res == 0:
+                # print("NO")
+                current_node.add_child(
+                    Tree(
+                        id=int("".join([str(i) for i in self.game_order])),
+                        mc_move=selected_node,
+                        opponent_move=self.opponent_made_moves[0],
+                        count=1,
+                        reward=0.01,
+                    )
+                )
+            self.opponent_made_moves.remove(self.opponent_made_moves[0])
+            # current_node.add_child(Tree(selected_node, 0))
 
             self.player_made_moves.append(selected_node)
             self.game_order.append(selected_node)
@@ -193,37 +374,37 @@ class TicTacToe:
                 if c.move == selected_node:
                     current_node = c
             new_board[selected_node] = CIRCLES
-        node_prime = Node(new_board.copy(), self.possible_moves(new_board))
+            current_node.board = new_board.copy()
 
         # print(self.print_board(new_board))
-        return self.get_Q_values(current_node, node_prime)
+        return self.get_Q_valuess(current_node)
 
-    def Q_convergence(self, epsilon=0.001) -> None:
-        """Simulates the Game until convergence is achieved
-
-        Args:
-            epsilon (float, optional): max difference between iterations. Defaults to 0.001.
-        """
-        tree = Tree()
-        current_node = tree
-
-        for _ in range(5000):
+    def new_ai_game(self) -> None:
+        i = 0
+        j = 0
+        for _ in range(10000):
             self.__init__()
-            current_node = tree
+            current_node = self.tree
             # met de reward kunnen we een counter toevoegen aan hoe vaak een bepaalde node in de tree gewonnen heeft.
             # hiervoor moeten we een tree walker maken zodat we de juiste stappen kunnen nemen om bij de juiste nodes de counter te incrementen.
-            reward = self.get_Q_values(
-                current_node, node=Node(ttt.board, []), recursive=False
-            )
+            reward = self.get_Q_valuess(current_node, recursive=False)
             # nu zetten we current_node weer terug naar de start node zodat de eerste stap die gemaakt wordt wordt toegevoegd aan de eerste node.
-            tree.walk_tree_add_reward(self.game_order, reward)
+            # print(self.game_order,reward)
+            if reward == 1:
+                i += 1
+            if reward == 0.5:
+                j += 1
+            self.tree.walk_tree_add_reward(self.game_order, reward)
 
         # print alle nodes in de tree nog niet heel mooi als je helemaal naar boven scrolled zie je de eerste node die heeft 8 children dit zijn de 8 eerste moves.
         # heb voor nu uitgezet dat alle nodes worden geprint alleen de eerste node met ze children word geprint en dat zijn alle eerste moves die gemaakt zijn.
         # als je het weer aan wilt zetten kan je dat doen in de functie print_children door de commented lines te uncommenten.
-        current_node.print_children()
+        # current_node.print_children()
+        print("totalgame: 10,000 games won: ", i, "draws: ", j)
 
 
 if __name__ == "__main__":
     ttt = TicTacToe()
     ttt.Q_convergence()
+    ttt.new_ai_game()
+    ttt.save_tree()
