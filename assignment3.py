@@ -359,6 +359,8 @@ class TicTacToe:
                     data.append([j, difference])
         np.savetxt("conv2.csv", data, delimiter=",")
         self.tree.print_children()
+        global data_viz_output
+        data_viz_output += f"difference: {difference}\n total games: {j} games won: {i}\n"
         print("difference: ", difference)
         print("total games: ", j, " games won: ", i)
 
@@ -434,6 +436,7 @@ class TicTacToe:
         i = 0
         j = 0
         for _ in range(10000):
+            print(_)
             self.__init__()
             current_node = self.tree
             reward = self.q_sim(current_node,ttt.board, printing=False, recursive=False)
@@ -442,7 +445,8 @@ class TicTacToe:
                 i += 1
             if reward == 0.5:
                 j += 1
-
+        global data_viz_outputaaaaaaa
+        data_viz_output += f"total game: 10,000 games won: {i} draws: {j}\n"
         print("total game: 10,000 games won: ", i, "draws: ", j)
         
     def viz_game(self) -> None:
