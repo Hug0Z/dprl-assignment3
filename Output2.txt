@@ -1,0 +1,75 @@
+[4]
+[0 0 0 0 1 0 0 0 0]
+Q val: 0.6853731543276607 mv: 0 op move: 4
+Q val: 0.7041341858730169 mv: 1 op move: 4
+Q val: 0.7852710470706156 mv: 2 op move: 4
+Q val: 0.7168411064609784 mv: 3 op move: 4
+Q val: 0.5835883190609064 mv: 5 op move: 4
+Q val: 0.6048874700150653 mv: 6 op move: 4
+Q val: 0.5751763802410284 mv: 7 op move: 4
+Q val: 0.633825495183634 mv: 8 op move: 4
+Q val: 0.7852710470706156 mv: 2 op move: 4
+
+[4, 2, 1]
+[0 0 2 0 1 0 0 0 0]
+Q val: 0.8886206813239913 mv: 5 op move: 1
+Q val: 0.5896812302385743 mv: 0 op move: 1
+Q val: 0.5302630646589902 mv: 3 op move: 1
+Q val: 0.5612888342888344 mv: 6 op move: 1
+Q val: 0.6423623509841975 mv: 7 op move: 1
+Q val: 0.6528493113691602 mv: 8 op move: 1
+Q val: 0.8886206813239913 mv: 5 op move: 1
+
+[4, 2, 1, 5, 6]
+[0 0 2 0 1 2 0 0 1]
+Q val: 0.6731153846153846 mv: 3 op move: 6
+Q val: 0.8500249999999999 mv: 0 op move: 6
+Q val: 0.5192692307692307 mv: 7 op move: 6
+Q val: 0.6316052631578947 mv: 1 op move: 6
+Q val: 0.8500249999999999 mv: 0 op move: 6
+
+[4, 2, 1, 5, 6, 0, 7]
+[2 0 2 0 1 2 0 0 1]
+Q val: 0.5005 mv: 1 op move: 7
+Q val: 0.5005 mv: 6 op move: 7
+Q val: 0.5005 mv: 3 op move: 7
+Q val: 0.5005 mv: 1 op move: 7
+
+[4]
+[0 0 0 0 1 0 0 0 0]
+Q val: 0.6853731543276607 mv: 0 op move: 4
+Q val: 0.7041341858730169 mv: 1 op move: 4
+Q val: 0.7852710470706156 mv: 2 op move: 4
+Q val: 0.7168411064609784 mv: 3 op move: 4
+Q val: 0.5835883190609064 mv: 5 op move: 4
+Q val: 0.6048874700150653 mv: 6 op move: 4
+Q val: 0.5751763802410284 mv: 7 op move: 4
+Q val: 0.633825495183634 mv: 8 op move: 4
+Q val: 0.7852710470706156 mv: 2 op move: 4
+
+[4, 2, 5]
+[0 0 2 0 1 0 0 0 0]
+Q val: 0.8997797077474498 mv: 0 op move: 5
+Q val: 0.9499868948916823 mv: 1 op move: 5
+Q val: 0.8981705118005835 mv: 3 op move: 5
+Q val: 0.8526801375752365 mv: 6 op move: 5
+Q val: 0.7923189189189189 mv: 7 op move: 5
+Q val: 0.795054763900531 mv: 8 op move: 5
+Q val: 0.9499868948916823 mv: 1 op move: 5
+
+[4, 2, 5, 1, 8]
+[0 2 2 0 1 0 0 0 1]
+Q val: 0.001 mv: 0 op move: 8
+Q val: 0.001 mv: 7 op move: 8
+Q val: 0.6154615384615384 mv: 6 op move: 8
+Q val: 0.6667333333333333 mv: 5 op move: 8
+Q val: 0.001 mv: 3 op move: 8
+Q val: 0.6667333333333333 mv: 5 op move: 8
+
+[4, 2, 5, 1, 8, 5, 3]
+[0 2 2 0 1 2 0 0 1]
+Q val: 0.0005 mv: 6 op move: 3
+Q val: 0.5005 mv: 0 op move: 3
+Q val: 0.5005 mv: 7 op move: 3
+Q val: 0.5005 mv: 0 op move: 3
+

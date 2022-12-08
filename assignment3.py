@@ -9,7 +9,7 @@ CIRCLES = 2
 ROWS = 3
 COLUMNS = 3
 DIAGONALS = 2
-
+data_viz_output = ""
 
 class Tree(object):
     def __init__(
@@ -71,15 +71,22 @@ class Tree(object):
                 return c
         return 0
 
-    def find_best_move(self, opponent_move, board):
+    def find_best_move(self, opponent_move, board, printing):
+        global data_viz_output
         max = 0
         move = -1
+        if printing:
+            data_viz_output += str(self.board) + "\n"
         for c in self.children:
-            if c.opponent_move == opponent_move:
+            if c.opponent_move == opponent_move and c.move != opponent_move:
                 if c.reward > 0 and c.count > 0:
-                    if c.reward / c.count > max and move not in board:
+                    if printing:
+                        data_viz_output += f"Q val: {c.reward / c.count} mv: {c.move} op move: {opponent_move}\n"
+                    if c.reward / c.count > max and move not in board and move not in self.game_order:
                         max = c.reward / c.count
                         move = c.move
+        if printing:
+            data_viz_output += f"Q val: {max} mv: {move} op move: {opponent_move}\n\n" 
         return move
 
     def back_propegation(self, reward):
@@ -215,6 +222,7 @@ class TicTacToe:
                 return node
             else:
                 return self.selection(random.choice(next_nodes))
+                
 
     def expansion(self, current_node: Tree, board: np.array) -> list:
         """Finds all childs of selected node
@@ -252,9 +260,9 @@ class TicTacToe:
                     current_node.add_child(child)
                     children.append(child)
                 else:
-                    self.opponent_made_moves.append(opponent)
-                    child = current_node.get_child(move, opponent)
-                    children.append(child)
+                  self.opponent_made_moves.append(opponent)
+                  child = current_node.get_child(move,opponent)
+                  children.append(child)
         return children
 
     def get_Q_values(
@@ -275,10 +283,10 @@ class TicTacToe:
                 ret = 1
             else:
                 ret = 0
-            # current_node.rollback(ret)
+            #current_node.rollback(ret)
             return ret
         elif len(self.possible_moves(board)) == 0:
-            # current_node.rollback(0.5)
+            #current_node.rollback(0.5)
             return 0.5
 
         new_board = self.opponent_move(board) if recursive else self.board.copy()
@@ -311,7 +319,7 @@ class TicTacToe:
                     current_node = c
         return self.get_Q_values(current_node, new_board.copy())
 
-    def Q_convergence(self, epsilon: float = 0.0000001) -> None:
+    def Q_convergence(self, epsilon: float = 0.000001) -> None:
         """Simulates the Game until convergence is achieved
 
         Args:
@@ -322,6 +330,7 @@ class TicTacToe:
         old_q = 0
         new_q = 1
         difference = 1
+        data = []
         while difference > epsilon:
             self.__init__()
             current_node = self.tree
@@ -339,20 +348,22 @@ class TicTacToe:
 
                     reward = self.get_Q_values(leaf, self.board.copy(), recursive=False)
                     prop_node.back_propegation(reward)
+                    #print(self.game_order)
                     if reward > 0:
                         i += 1
                     new_q = self.tree.tree_q()
                     difference = abs(old_q - new_q)
-                    if j % 900 == 0:
+                    if j % 9000 == 0:
                         print(difference, i)
                     j += 1
-
+                    data.append([j, difference])
+        np.savetxt("conv2.csv", data, delimiter=",")
         self.tree.print_children()
         print("difference: ", difference)
         print("total games: ", j, " games won: ", i)
 
     def q_sim(
-        self, current_node: Tree, board: np.array, recursive: bool = True
+        self, current_node: Tree, board: np.array, printing, recursive: bool = True,
     ) -> float:
         """simulates the q value function
 
@@ -364,28 +375,34 @@ class TicTacToe:
             float: q reward
         """
         # SLIDE 28 lecture 7
+        #print(self.game_order)
         termination, winner = self.winning(board)
         if termination:
             if winner == CIRCLES:
                 ret = 1
             else:
                 ret = 0
-            # current_node.rollback(ret)
+            #current_node.rollback(ret)
             return ret
         elif len(self.possible_moves(board)) == 0:
-            # current_node.rollback(0.5)
+            #current_node.rollback(0.5)
             return 0.5
 
         new_board = self.opponent_move(board) if recursive else self.board.copy()
 
         moves = self.possible_moves(new_board)
         if len(moves) > 0:
+            if printing:
+                global data_viz_output
+                data_viz_output += str(self.game_order) + "\n"
             selected_node = current_node.find_best_move(
-                self.opponent_made_moves[0], self.game_order
+                self.opponent_made_moves[0], self.game_order, printing=printing
             )
             # if we haven't found the move before we generate a new one
             if selected_node == -1:
                 selected_node = random.choice(moves)
+                while selected_node not in current_node.game_order and selected_node != -1:
+                  selected_node = random.choice(moves)
             self.opponent_made_moves.remove(self.opponent_made_moves[0])
 
             self.game_order.append(selected_node)
@@ -393,8 +410,8 @@ class TicTacToe:
                 if c.move == selected_node:
                     current_node = c
             new_board[selected_node] = CIRCLES
-
-        return self.q_sim(current_node, new_board.copy())
+       # print(self.game_order)
+        return self.q_sim(current_node, new_board.copy(), printing = printing)
 
     def new_ai_game(self) -> None:
         """simulates 10000"""
@@ -403,7 +420,8 @@ class TicTacToe:
         for _ in range(10000):
             self.__init__()
             current_node = self.tree
-            reward = self.q_sim(current_node, ttt.board, recursive=False)
+            reward = self.q_sim(current_node,ttt.board, printing=False, recursive=False)
+            # print(self.game_order, reward)
             if reward == 1:
                 i += 1
             if reward == 0.5:
@@ -411,8 +429,85 @@ class TicTacToe:
 
         print("total game: 10,000 games won: ", i, "draws: ", j)
 
+    def q_dumb(
+        self, current_node: Tree, board: np.array, recursive: bool = True,
+    ) -> float:
+        """simulates the q value function
+
+        Args:
+            node (Node, optional): node with mc_move from previous state. Defaults to None.
+            recursive (bool, optional): if this is main node. Defaults to True.
+
+        Returns:
+            float: q reward
+        """
+        # SLIDE 28 lecture 7
+        #print(self.game_order)
+        termination, winner = self.winning(board)
+        if termination:
+            if winner == CIRCLES:
+                ret = 1
+            else:
+                ret = 0
+            #current_node.rollback(ret)
+            return ret
+        elif len(self.possible_moves(board)) == 0:
+            #current_node.rollback(0.5)
+            return 0.5
+
+        new_board = self.opponent_move(board) if recursive else self.board.copy()
+
+        moves = self.possible_moves(new_board)
+        if len(moves) > 0:
+            selected_node = current_node.find_best_move(
+                self.opponent_made_moves[0], self.game_order, printing=False
+            )
+            # if we haven't found the move before we generate a new one
+            if selected_node == -1:
+                selected_node = random.choice(moves)
+                while selected_node not in current_node.game_order and selected_node != -1:
+                  selected_node = random.choice(moves)
+            self.opponent_made_moves.remove(self.opponent_made_moves[0])
+
+            self.game_order.append(selected_node)
+            for c in current_node.children:
+                if c.move == selected_node:
+                    current_node = c
+            new_board[selected_node] = CIRCLES
+       # print(self.game_order)
+        return self.q_dumb(current_node, new_board.copy())
+
+    def new_ai_game(self) -> None:
+        """simulates 10000"""
+        i = 0
+        j = 0
+        for _ in range(10000):
+            self.__init__()
+            current_node = self.tree
+            reward = self.q_dumb(current_node,ttt.board, recursive=False)
+            # print(self.game_order, reward)
+            if reward == 1:
+                i += 1
+            if reward == 0.5:
+                j += 1
+
+        print("total game: 10,000 games won: ", i, "draws: ", j)
+
+    def viz_game(self) -> None:
+        global data_viz_output
+        for _ in range(5):
+            print(_)
+            self.__init__()
+            current_node = self.tree
+            reward = self.q_sim(current_node, ttt.board, recursive=False, printing=True)
+        print(data_viz_output)
+        print("start writing")
+        with open("Output2.txt", "w") as f:
+            f.write(data_viz_output)
+
 
 if __name__ == "__main__":
     ttt = TicTacToe()
     ttt.Q_convergence()
     ttt.new_ai_game()
+    ttt.viz_game()
